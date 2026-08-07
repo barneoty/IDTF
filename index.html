@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0f14" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Surveillance" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<title>Surveillance Timeline</title>
+<style>
+:root{--bg:#0b0f14;--panel:#131923;--line:#26303d;--text:#f5f7fa;--muted:#8e9aaa;--green:#46d17d;--amber:#ffb020;--red:#ff4d4f}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}
+body{overflow:hidden}.app{height:100dvh;display:grid;grid-template-rows:auto 1fr;gap:14px;padding:calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom))}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding:14px 18px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(180deg,#151c26,#111720)}
+.clockrow{display:flex;align-items:baseline;gap:10px}.clock{font-size:clamp(70px,11vw,132px);font-weight:820;letter-spacing:-4px;line-height:.86}.sec{font-size:clamp(26px,3.2vw,42px);color:var(--muted);font-variant-numeric:tabular-nums}.date{color:var(--muted);font-size:14px;text-align:right}
+.grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(330px,.85fr);gap:14px;min-height:0}.left{display:grid;grid-template-rows:1fr auto;gap:14px;min-height:0}.right{min-height:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px;min-height:0}.eyebrow{text-transform:uppercase;letter-spacing:.13em;font-size:13px;color:var(--muted);font-weight:750}
+.focus{display:flex;flex-direction:column;justify-content:center;background:radial-gradient(circle at 20% 15%,rgba(255,255,255,.05),transparent 38%),var(--panel)}
+.focusText{font-size:clamp(38px,5.4vw,72px);line-height:1.03;font-weight:820;letter-spacing:-1.8px;margin-top:14px}
+.next{display:grid;grid-template-columns:1fr auto;align-items:center;gap:18px}.nextTitle{font-size:clamp(26px,3vw,42px);font-weight:760;line-height:1.08;margin-top:8px}.nextFocus{font-size:15px;color:var(--muted);margin-top:10px}.count{font-size:clamp(40px,5vw,64px);font-weight:850;font-variant-numeric:tabular-nums}
+.timeline{height:100%;display:flex;flex-direction:column;overflow:hidden}.list{overflow:auto;margin-top:10px;padding-right:4px}.event{display:grid;grid-template-columns:72px 1fr;gap:12px;padding:12px 10px;border-top:1px solid var(--line)}
+.event:first-child{border-top:0}.etime{font-size:19px;font-weight:800}.etitle{font-size:17px;font-weight:700;line-height:1.2}.efocus{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.35}
+.past{opacity:.32}.nextEvent{background:rgba(255,255,255,.04);border-radius:12px}.current .etime{color:var(--green)}
+.footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;color:var(--muted);font-size:12px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:6px}
+button{appearance:none;border:1px solid var(--line);background:#0e141c;color:var(--text);border-radius:10px;padding:8px 11px;font-weight:700}
+.warnA{border-color:rgba(255,176,32,.8);box-shadow:0 0 30px rgba(255,176,32,.08)}.warnA .count{color:var(--amber)}
+.warnR{border-color:rgba(255,77,79,.9);box-shadow:0 0 36px rgba(255,77,79,.14)}.warnR .count{color:var(--red)}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.012)}}.pulse{animation:pulse 1.15s ease-in-out infinite}
+@media(max-width:850px){.grid{grid-template-columns:1fr;grid-template-rows:1.1fr .9fr}.focusText{font-size:clamp(34px,7vw,58px)}.next{grid-template-columns:1fr}.count{justify-self:start}}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="top"><div class="clockrow"><div id="clock" class="clock">--:--</div><div id="sec" class="sec">--</div></div><div id="date" class="date">—</div></header>
+<main class="grid">
+<div class="left">
+<section class="card focus"><div class="eyebrow">Current Event</div><div id="currentEvent" class="currentEventText">—</div><div class="focusDivider"></div><div class="eyebrow">Surveillance Focus Now</div><div id="focus" class="focusText">Critical Junctions · PCS</div></section>
+<section id="nextCard" class="card next"><div><div class="eyebrow">Next Critical Event</div><div id="nextTitle" class="nextTitle">1530 — IDTF TTR</div><div id="nextFocus" class="nextFocus">Focus shift: Critical Junctions · PCS</div></div><div id="count" class="count">--:--</div></section>
+</div>
+<aside class="right"><section class="card timeline"><div class="eyebrow">Event Timeline</div><div id="list" class="list"></div><div class="footer"><div><span class="dot"></span>Auto-tracking active</div><button id="alertBtn">Enable Alerts</button></div></section></aside>
+</main>
+</div>
+<script>
+const phases=[
+{start:"15:30",focus:["Critical Junctions","PCS"],events:[["15:30","IDTF TTR"]]},
+{start:"16:00",focus:["Critical Junctions","PCS","Red Sector"],events:[["16:00","Gates Standby"],["16:00","Deployment of ChemPro @ Red"]]},
+{start:"16:30",focus:["Critical Junctions","PCS","VCS"],events:[["16:30","Gates Open"]]},
+{start:"17:15",focus:["VCS","PCS","BOS","Govt Suite"],events:[["17:15","Expected Arrival of VVIP @ L4 BOS Lounge & L5 Govt Suite"],["18:00","NDP Pre-Show Commence"]]},
+{start:"18:10",focus:["Stadium Internal","Govt Suite","VCS"],events:[["18:10","VIP 1 and 2A Seated"]]},
+{start:"18:15",focus:["Stadium Internal","Critical Junctions"],events:[["18:15","VVIP 2B and 2C Seated"],["18:25","NDP Go Live"],["18:31","P&C Commence"]]},
+{start:"18:39",focus:["N38","Stadium Internal","Critical Junctions"],events:[["18:39","PM Board Motorcade @ N38"]]},
+{start:"18:41",focus:["Stadium Internal","Critical Junctions"],events:[["18:41","Arrival of PM"],["18:47","Arrival of President"],["18:49","National Anthem"],["18:51","President Parade Inspection"],["19:49","Drone Light Show"]]},
+{start:"20:20",focus:["Stadium Internal","Critical Junctions","Kallang Riverside Park"],events:[["20:20","Fireworks Medley"]]},
+{start:"20:25",focus:["Stadium Internal","Critical Junctions"],events:[["20:25","President Departure"],["20:30","PM Departure"]]},
+{start:"20:35",focus:["BOS Lounge","MRTs","Stadium Exits","Critical Junctions"],events:[["20:35","PM Engagement 1 @ L4 BOS"],["20:50","PM Engagement 2 @ L4 BOS"]]}
+];
+const events=[];phases.forEach((p,i)=>p.events.forEach(e=>events.push({time:e[0],title:e[1],focus:p.focus,phase:i})));events.sort((a,b)=>a.time.localeCompare(b.time));
+const $=id=>document.getElementById(id);let audioCtx=null,alerts=false,lastPhase=-1,lastNext="",fired=new Set();
+function eventSec(t){const [h,m]=t.split(":").map(Number);return h*3600+m*60}function nowSec(d){return d.getHours()*3600+d.getMinutes()*60+d.getSeconds()}
+function phaseAt(s){let i=0;for(let x=0;x<phases.length;x++){if(s>=eventSec(phases[x].start))i=x;else break}return s<eventSec(phases[0].start)?0:i}
+function nextEvent(s){return events.find(e=>eventSec(e.time)>s)||null}
+function currentEvents(s){
+  const past=events.filter(e=>eventSec(e.time)<=s);
+  if(!past.length)return [];
+  const latest=eventSec(past[past.length-1].time);
+  return past.filter(e=>eventSec(e.time)===latest)
+}
+function fmt(s){s=Math.max(0,s);const m=Math.floor(s/60),q=s%60;return `${String(m).padStart(2,"0")}:${String(q).padStart(2,"0")}`}
+function beep(kind){if(!alerts||!audioCtx)return;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);o.frequency.value=kind==="red"?900:650;g.gain.setValueAtTime(.0001,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.2,audioCtx.currentTime+.02);g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+.35);o.start();o.stop(audioCtx.currentTime+.4)}
+function renderTimeline(s,pidx,next){$("list").innerHTML="";events.forEach(e=>{const d=document.createElement("div");d.className="event";const es=eventSec(e.time);if(es<s)d.classList.add("past");if(next&&e===next)d.classList.add("nextEvent");if(e.phase===pidx)d.classList.add("current");d.innerHTML=`<div class="etime">${e.time}</div><div><div class="etitle">${e.title}</div><div class="efocus">${e.focus.join(" · ")}</div></div>`;$("list").appendChild(d)});const n=$("list").querySelector(".nextEvent");if(n)n.scrollIntoView({block:"center",behavior:"smooth"})}
+function tick(){const d=new Date(),h=String(d.getHours()).padStart(2,"0"),m=String(d.getMinutes()).padStart(2,"0"),s=String(d.getSeconds()).padStart(2,"0");$("clock").textContent=`${h}:${m}`;$("sec").textContent=s;$("date").textContent=d.toLocaleDateString(undefined,{weekday:"long",day:"2-digit",month:"short",year:"numeric"});const ns=nowSec(d),pi=phaseAt(ns),p=phases[pi],n=nextEvent(ns),ce=currentEvents(ns);
+$("focus").textContent=p.focus.join(" · ");
+if(ce.length){
+  $("currentEvent").textContent=`${ce[0].time} — ${ce.map(e=>e.title).join(" / ")}`;
+}else{
+  $("currentEvent").textContent="Pre-event";
+}$("nextCard").classList.remove("warnA","warnR","pulse");if(n){const diff=eventSec(n.time)-ns;$("nextTitle").textContent=`${n.time} — ${n.title}`;$("nextFocus").textContent=`Focus shift: ${n.focus.join(" · ")}`;$("count").textContent=fmt(diff);if(diff<=300){$("nextCard").classList.add("warnR","pulse");if(diff===300&&!fired.has(n.time+"5")){beep("red");fired.add(n.time+"5")}}else if(diff<=900){$("nextCard").classList.add("warnA");if(diff===900&&!fired.has(n.time+"15")){beep("amber");fired.add(n.time+"15")}}}else{$("nextTitle").textContent="No further scheduled events";$("nextFocus").textContent="Maintain current surveillance focus";$("count").textContent="—"}const nt=n?n.title:"";if(pi!==lastPhase||nt!==lastNext){renderTimeline(ns,pi,n);lastPhase=pi;lastNext=nt}}
+$("alertBtn").addEventListener("click",()=>{if(!audioCtx)audioCtx=new (window.AudioContext||window.webkitAudioContext)();audioCtx.resume();alerts=!alerts;$("alertBtn").textContent=alerts?"Alerts On":"Enable Alerts";if(alerts)beep("amber")});
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js"))}
+tick();setInterval(tick,1000);
+</script>
+</body>
+</html>
